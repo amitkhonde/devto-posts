@@ -1,0 +1,70 @@
+# What is this series about
+Understanding the things or tools that you use in your daily work is a very crucial part of doing things effectively. As a frontend engineer JavaScript is the tool that we use on an almost daily basis. So it is non-trivial that we understand some internals of JavaScript to do our tasks more effectively.
+
+With this in mind, I am excited to create **JavaScript Internals** as a series of posts where I will be writing about the internal workings of the V8 engine and how we can write code that is compiler friendly and in turn performant.
+
+# Post 1: Working with Arrays
+In this post, we are going to see how V8 manages arrays internally. Now arrays in JavaScript may seem a very easy topic to learn and you might think what special could be there apart from reserving some space in the heap and keep adding memory references to it as we push elements in our array. But trust me there is a whole lot of processing that goes on under the hood which is optimizing the performance.
+
+## How arrays are stored internally
+Before diving directly into the details, let us get clear on one thing. V8 engine internally assigns data types and classes to our variables. I know this is very confusing or creates a lot of questions in your mind right now, but why V8 does that is something we are going to see in upcoming posts. So for now, just go with the flow and let that sync in.
+
+Now, let us see what are different possibilities for our array values in JavaScript.
+```
+var arr1 = [10, 20, 30, 40];
+var arr2 = [10.1, 20.9, 30.7, 40.5];
+var arr2 = [10.1, 40.5, "x"];
+```
+Let us look at these values one by one. As we can see, the first array only contains integers, the second only contains doubles and the third contains mixed values. Now when V8 sees these values, it assigns a type to each of them. So the first one will be the **SMI_ELEMENTS** array. The second one will be the **DOUBLE_ELEMENTS** array. And the third one will be the **REGULAR_ELEMENTS** array. One interesting thing to note here is that when we are inserting a double value in the SMI_ELEMENTS array, V8 will internally change its type to DOUBLE_ELEMENTS array. And even if we later remove the double element, the type will not go back to the SMI_ELEMENTS array. It will still be a DOUBLE_ELEMENTS array. Because changing of type can only go from simpler to complex type and not the other way. 
+
+Ok. So far so good. There is nothing shocking or unusual till this point. But now consider the following code
+```
+var arr = [1, 2, 3];
+arr[10] = 15;
+```
+In the above array, there are empty values from index 3 to 9. Now at this point, V8 treats that empty value as a hole in the array and that is why the type of this array is set as **HOLEY_ELEMENTS** array.
+
+## Why does this matter?
+Now comes the interesting part. To understand why all of this matters, let us understand how value is retrieved when we are accessing any index in the array. 
+*Note: I am no expert here. This is just sample pseudocode on how the algorithm works internally. It is simplified for the sake of this post.*
+```
+function getElementAtIndex(index, arr) {
+  // First check is made for the index bound. 
+  // If the index is out of bound, undefined is returned.
+  if (index < 0 || index >= arr.length) {
+    return undefined;
+  }
+  
+  // If the array is of type HOLEY_ELEMENTS,we will have to perform extra steps.
+  // Otherwise we can directly return the value from here
+  // All the rest steps are performed only for HOLEY array and not SMI or DOUBLE.
+  // You can read more about hasOwnProperty here: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwnProperty
+  if (arr.hasOwnProperty(index)) {
+    // return value
+  }
+  
+  // At this point, if the value is not found the whole prototype chain is traversed to check if hasOwnProperty returns true;
+  // And if no-one has the property index, we will return undefined. This is a lot of work for just returning an undefined.
+}
+```
+As we can see in the above code, we have to perform extra steps for value retrieval in the HOLEY_ELEMENTS array. Even in the best-case scenario, if the value exists, it will perform one extra step to retrieve it.
+
+## How to avoid holes/empty elements in an array?
+Now that we know why the HOLEY_ELEMENTS type is a problem, let us see what are the ways we accidentally create them and try to be more careful.
+* Assigning values to farthest index values.
+* Using delete keyword on an array index.
+* Giving empty value while declaring the array. For example: var arr = [10, 20, , 30];
+
+## Chose your performance wisely
+Isn't this fun? Knowing all these details and avoiding the above mistakes like a pro. But no. Everything comes with a cost. Imagine a scenario: *You are working on a feature where you will be using an array and the 1000 values inside that array are produced dynamically using different APIs. Now based on the current knowledge, we will create an empty array and start pushing values one by one.*
+
+The problem here is that, when V8 sees an empty array declaration, it is going to assume that 50-60 values are going to be inserted in this array and so will reserve the space for the same. When the array size is growing, it will again assign some new space with larger capacity, copy all the elements from the current location to a new location and continue inserting the elements. I hope that you understand what is the problem with this. The copy-over part is going to be a big overhead with a large number of values.
+
+The solution to this problem can be to assign some dummy value at the 1000th index or use the array constructor to initialize an array with the required length so that V8 will reserve that much space for your array and keep on inserting the values. But if we do so, the array type will be converted to HOLEY_ELEMENTS. That is why it is important to know which part you want to be optimized, writing to an array or reading from the array.
+
+
+I hope you learned something new from this post. If you folks have any suggestions or questions, feel free to post them below and we will solve them together. Till then, Happy Coding!!
+
+## References
+Mathias Bynens - V8 internals for JavaScript developers - https://youtu.be/m9cTaYI95Zc
+How do JavaScript arrays work under the hood? - https://ryanpeden.com/how-do-javascript-arrays-work-under-the-hood/
