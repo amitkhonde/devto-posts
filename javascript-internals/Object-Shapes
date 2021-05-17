@@ -1,0 +1,53 @@
+# What is this series about
+Understanding the things or tools that you use in your daily work is a very crucial part of doing things effectively. As a frontend engineer JavaScript is the tool that we use on an almost daily basis. So it is non-trivial that we understand some internals of JavaScript to do our tasks more effectively.
+
+With this in mind, I am excited to create JavaScript Internals as a series of posts where I will be writing about the internal workings of the V8 engine and how we can write code that is compiler friendly and in turn performant.
+
+# Post 3: Object Shapes
+In today's part of the JavaScript Internals series, we going to talk about the very fundamental feature of the language -- Objects. We are going to see how those are handled in the JavaScript engines. And later we will also see some of the best practices we can use to make our web apps performant. So, MDN defines JavaScript object as
+"An object is a collection of properties, and a property is an association between a name (or key) and a value."
+Wow. Such a simple and easy definition. Well, this simple definition gives us the power to do a lot of crazy things that we can not do in most other programming languages. Things like adding/removing properties from/to objects, manipulate this binding, and not needing a class to initiate the object, etc are some of the things that JavaScript can give us just because of that simple definition (Well, also because ECMAScript standards have defined it like that).
+
+Now, just for a minute, imagine that you are a JavaScript engine. You get a code to execute, and it contains thousands of objects. Now we know how objects are stored in the variables. The reference of the object is stored. And when we are trying to access any property of the object, (let us say 2nd property) we will go 1 offset further from the object's memory reference. And you (the JavaScript engine) do it every time the code is trying to access the property. From the sound of this, we obviously know that this will result in a terrible performance of the code.
+
+But, let us imagine that somehow magically, you know that 500 of those objects are going to be of the same structure. Well, that makes it a lot better right? You (still the JavaScript engine) can keep track of the objects that belong to that structure and calculate all the offset sizes of all the properties in advance. So when code tries to access a property of an object that belongs to these 500 objects, you can just directly add the offset size to the memory reference of that address and Eureka! We have the value.
+
+**This is exactly how the JavaScript engine gets us the value of some key. It keeps track of all the structures and when we are accessing any value, it will check the structure of the object and get the value from that offset. And those structures are known as Shapes.** Some people call it Hidden Classes, some call it classes but I like the name Shape because it defines that structure at its bare minimum level. In the end, it is actually just a Shape for an object.
+
+## How JavaScript Engines utilizes these shapes and how are they created?
+Now comes the interesting part. Now we will go through the journey of an Object. Earlier we were pretending to be the JavaScript Engine, now we will be an Object. So now imagine you are an object and LET US GO!
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/s32g9suvkmsf2f85dpeb.png)
+Ok. So you (the object) are created for the first time. You do not have any properties to you. At this time, an empty shape is maintained for you. You might ask why to maintain an empty shape? But suppose someone is trying to access a property on an empty object. The engine can optimize the performance just by checking the shape and return `undefined` from there itself. Now let us proceed and assign some properties to you (the object).
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ekyl4vdbnscpz2gv6ukb.png)
+Now we assign a property `name` to you (nice name BTW). Now the shape will change and a field will be added to that shape. And that property will be pointing to a property descriptor. Let us not worry about what is property descriptor now. Just understand that it will store the offset of the property from starting address of the object. Now let us add one more property to you (the object) and see what happens.
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/es10vdkil9uyp948307b.png)
+So we have assigned a new property `age` and we can clearly see that a new shape is created (BTW, previous shapes are also stored) and if we think about following this pattern, it will be a quite large number of shapes and will quickly be very hard to maintain. We will fall into the same performance pitfall that we were trying to run from. 
+To avoid this problem, the JavaScript Engine maintains a chain between all of these evolving shapes. With the help of this chain, we do not have to repeat any old shape properties because we can easily go back in the chain and check for properties. So for you (the object), the shape chain will finally look something like this:
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/rw0zs909yhl50hotgz2y.png)
+Sigh! That was quite a knowledge journey. But there is just one little concept remaining. Shape Trees. Let us consider the following code:
+```javascript
+var obj = {};
+var obj1 = {};
+
+obj.name = "CoolName";
+obj1.name = "CoolerName";
+
+obj.age = 21;
+obj1.age = 22;
+
+obj.address = "Heap";
+obj1.job = "Own Properties";
+```
+As we can see, obj and obj1 have all properties common and one property different. How do you think shapes are maintained for these two? Well, the diagram will look exactly like the above diagram but when the last two lines are executed, obj, obj1 will have a branch (like a tree branch) from the last shape which will have different properties. This tree structure of shapes is helpful for identifying a common property repeatedly.
+
+## Why was learning all of this necessary?
+Well, to answer this question, I will list down some best practices for objects and these practices are derived from the knowledge of shapes. So let us look at those points:
+* Use Factory functions when defining objects. This will make sure all of those objects have the same shape.
+* Try avoiding the Object constructor.
+* Sometimes even the order of keys matters (In earlier or some JavaScript engines).
+
+## Conclusion
+As part of the conclusion, I have a little exploration exercise for you guys. As we have heard, Arrays are also Objects in JavaScript. How do you think shapes are handled for arrays? Well, comment down below with what you think about it or this post, or anything related to JavaScript. Thanks for reading. Till then, Happy Coding!!
+
+## References:
+JavaScript Engines: The Good Parts™ - Mathias Bynens & Benedikt Meurer - JSConf EU 2018 --https://www.youtube.com/watch?v=5nmpokoRaZI
