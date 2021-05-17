@@ -1,0 +1,40 @@
+# What is this series about
+Understanding the things or tools that you use in your daily work is a very crucial part of doing things effectively. As a frontend engineer JavaScript is the tool that we use on an almost daily basis. So it is non-trivial that we understand some internals of JavaScript to do our tasks more effectively.
+
+With this in mind, I am excited to create JavaScript Internals as a series of posts where I will be writing about the internal workings of the V8 engine and how we can write code that is compiler friendly and in turn performant.
+
+# Post 2: Garbage Collection
+Imagine you arrive at a restaurant. There are a hundred tables at the restaurant. Out of 100, 95 tables are still occupied and at the remaining 5 tables, people have just left and their plates are still on the tables. Now for you to sit, restaurant staff will clear out one of those five tables or all of them and you would sit and enjoy your meal.
+
+Did you see what happened here? If we are to make analogies to the JavaScript environment, you are a new object, 100 tables are the available memory, 95 occupied tables are 95 active objects and 5 empty tables with dirty dishes are the dead objects that your application does not need anymore. Now, the restaurant staff is the JavaScript engine, who will clear those 5 dead objects and make the space for the new objects. THAT’S IT. This process is known as garbage collection. Now there are various algorithms to perform garbage collection optimally, one of which we will learn further in this article.
+
+## Why Learning about Garbage Collection Is Important?
+Well, there is this cliche answer again: To improve your application’s performance. I know you all knew this answer coming. So let me give you one small example. Suppose you accidentally assign one global object which is very large in size. Now you are not going to use that object ever again in the application life cycle. But it will hold space in the memory as it is a global object and V8 will assume that you are going to need it. So my point is, after learning the internals, you will be armed with the knowledge of how you can write JavaScript which will leave a lesser memory footprint.
+
+## The Basics
+Cool. So now that we are determined and not bored by the above examples, let us get some basics out of the way. First things first: V8 manages garbage collection. Not the JavaScript. What this implies is that there is no specification to follow on how to implement this piece. So every JavaScript engine implements its own version which developers think is the best approach.
+Another thing about V8 is that it uses the generational algorithm for garbage collection. This means it divides data into Younger Generation and Older Generation. We will talk about these generations in detail in further sections. 
+
+You might ask why V8 uses a generational algorithm? Well, the V8 team believes in something known as the generational hypothesis. Which states: All objects die shortly after creation. They have found this hypothesis by observing multiple applications and their memory footprints. This is the reason they use the generational algorithm and run garbage collection cycles mostly on younger generation memory. Now let us talk about the younger and older generation and see how garbage is collected in both of them. 
+
+## Young Generation and Old Generation
+Now, we will understand the whole process step by step and with help of some images.
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/34y5yazx69f286njwkjf.png)
+So as we can see, the whole memory in V8 is divided into 2 parts. Young generation and Old generation. The young generation in turn is divided into two parts. Don’t worry about that right now. We will see why it is being done in further steps.
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/lquy8fwdeyaflky3xhq8.png)
+Now when we start declaring objects and start using them, V8 will keep filling up the first part of the young generation.
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/zjshiw1gg5gne2d6xm2j.png)
+When the first part of the young generation is completely filled, V8 will mark the objects dead or alive and the alive objects will be moved to the second part of the young generation. 
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/j5xl0givt5clm8qpf1vk.png)
+Now all the new objects will be placed in the second part of the young generation until that is filled.
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/ox3gawp4hh8vfqiord71.png)
+Now comes the interesting part. Once the second part of the young generation is also completely filled, V8 will again mark the objects dead or alive and the alive objects will now be moved to Old Generation because if the object is still surviving, it is like to stay alive for a long time. After this, the second part is cleared and the same process from step 1 to step 5 is followed for new objects. 
+
+## Mark And Sweep in Old Generation 
+Now while V8 is doing this process, at some point in time, there will be no enough space for a new object in the old generation, a full mark, and sweep garbage collection algorithm will come into the picture. 
+Mark and sweep is a two-step process. The first part mark is where V8 will try to reach out to every accessible object from the call stack and global scope. All reachable objects are marked as alive and rest are marked as dead. 
+
+Now we have to understand that Old generation is quite large and the object sizes in it are also very large. That is why V8 can just remove dead objects as it does in the young generation because it will be a very heavy computation. Due to this limitation, the sweep process is done in various cycles where V8 will create some parallel threads and keep on sweeping memory in parts. 
+
+## Conclusion
+Sigh!! That was quite a ride. Now there is a lot of other detailing and tricks on how V8 manages garbage collection which we can not cover in a single post. I would suggest you go through the references section of this article and definitely check out the links if those excite you. Till then, Happy Coding!!
