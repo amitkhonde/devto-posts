@@ -1,0 +1,66 @@
+# What is this series about
+Understanding the things or tools that you use in your daily work is a very crucial part of doing things effectively. As a frontend engineer JavaScript is the tool that we use on an almost daily basis. So it is non-trivial that we understand some internals of JavaScript to do our tasks more effectively.
+
+With this in mind, I am excited to create JavaScript Internals as a series of posts where I will be writing about the internal workings of the V8 engine and how we can write code that is compiler friendly and in turn performant.
+
+# Post 4: Ignition and TurboFan
+Let me start this post by asking you this question: *When was the last time you knowingly type-checked variables in your JavaScript Application?* OR *When was the last time you thought about adding or removing a key to/from a JavaScript object at runtime?* Most of us do not remember, right? This is because of the freedom that JavaScript gives us to do almost anything in the language. Some weird examples of this freedom are:
+* Passing any arguments to the functions
+* Checking any bizarre combinations of values for equality
+* Assigning different types of values to a single variable in the same runtime
+* And many more...
+The list goes on. I am sure all of us can come up with many other "uses" of this freedom. But let us get one thing straight. Nothing in this world is for free. In our case, it comes with poor performance problems.
+Before diving into the details of how JavaScript Engines handle this, let us first understand why this results in poor performance. So as all of us know in some capacity or other, **Every code has to be converted to bytecode for execution.** So when a piece of code in a statically typed language (languages that have in-built types. For example C++) is getting compiled, the compiler already knows the type of each and every variable being used and hence can make fancy optimizations about the sizes, memory locations, etc. But in the case of JavaScript, the engine does not know which value is going to be inserted in the variable and hence can not make any optimizations based on variables or functions. A demonstration of this can be seen in the following code:
+```javascript
+var obj = {
+    x: 20
+};
+
+console.log("Adding 1 to x ");
+obj.x += 1;
+console.log("Incremented value of x", obj.x);
+
+obj.x = "Hello";
+console.log("Appending 'World' to x");
+obj.x += "World";
+console.log("New value of x", obj.x);
+```
+As we can see, due to JavaScript's freedom, we can change the type of x at the runtime. Due to this, JavaScript will always have to check what type of value is stored in `obj.x` to perform any kind of operation on it. This results in poor performance. To overcome this problem, V8 has come up with a new **Interpreter named Ignition** and an **Optimizing Compiler named TurboFan.** Let us see what they do and how they help our code run faster.
+
+## What is Ignition
+Ignition is an interpreter that JavaScript uses to interpret our code and start running it. Every JavaScript code goes through the following process to actually run it on a browser or machine.
+* JavaScript code is fed to the parser.
+* The parser parses the code and creates an Abstract Syntax Tree (AST).
+* This AST is then fed to the Ignition and bytecode is produced.
+* This bytecode is fed to the machine and our code starts running.
+
+Don't worry if some of the terms like AST or Parser are foreign to you right now. We will cover them in some other post. We are right now just interested in the Ignition interpreter. So when the bytecode is running on an actual machine, the Ignition maintains some data about the running code. This data is in various forms and contains different metrics about the code. One of those metrics is Hot Functions. Hot functions are the functions in our code that are used many times. A simple example of a hot function can be some calculation we perform on a value to display it on the page. On every change of this value, the calculation function is executed again and again the page is updated. The Ignition will collect the data about this function like the arguments being passed, what is their type, what is being returned and its type, etc. 
+
+## How TurboFan comes into the picture
+After identifying the hot functions in the code, Ignition will send that data to the TurboFan for optimizations. TurboFan will take this code and start running some magical optimizations because it already has the assumptions data from the Ignition. It will then replace the original bytecode with this new optimized bytecode and this process keeps on repeating for the lifetime of our program.
+To understand this better, let us take one example and go through the process. Consider the following code:
+```javascript
+function add(x, y) {
+    return x + y;
+}
+
+add(1, 2);
+add(12, 42);
+add(17, 25);
+add(451, 342);
+add(8, 45);
+```
+When this code is converted to bytecode and ran, Ignition will perform the following lengthy process for the addition process:
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/7fcyizadntr04mokaihp.png)
+Hectic right?? Now when we call this function many times with integer arguments, Ignition will classify this as a hot function and send it to the TurboFan with the collected information. TurboFan will optimize this function for integers, produce the bytecode and replace it in the original bytecode. Now when the next time `add(21, 45)` function is called, all these lengthy steps will be omitted and the result will be obtained faster.
+
+## The fallback mechanism
+But wait. What if we call our add function with string arguments? Well, to handle these cases, TurboFan will check the types of arguments being passed. If the types are different from numbers, it will fall back to the original bytecode which was generated by the Ignition and again this lengthy process will be followed. This process is known as Deoptimization. This new information will also be collected and if we call add function with string arguments too many times, Ignition will consider it as a hot function and send it to TurboFan with relevant information collected. The TurboFan will optimize add function for the string parameters also and the next time add function is called, an optimized bytecode will be run thus improving the performance.
+
+## Conclusion
+Well, this is why it is advised to treat JavaScript variables as statically typed variables so that it makes our code performant. This is not only true in the case of primitive types but also followed in the case of Objects. To understand more in-depth how an object's type is maintained, read the previous post in this series about the [Object Shapes] (https://dev.to/amitkhonde/javascript-internals-object-shapes-23i3). Now there is a lot more to Ignition and TurboFan apart from the type checking. If this article interests you, do check out the references where the speakers have covered this in-depth. Till then, Happy Coding!!
+
+## References
+* Franziska Hinkelmann: JavaScript engines - how do they even?: 
+https://www.youtube.com/watch?v=p-iiEDtpy6I
+* The JavaScript engine and hot functions: A beginner’s exploration: https://medium.com/@harumhelmy/the-javascript-engine-and-hot-functions-a-beginners-exploration-part-2-f4e351631229
