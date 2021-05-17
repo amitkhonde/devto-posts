@@ -1,0 +1,79 @@
+# What is this series about?
+Hello all! Welcome to the JavaScript interview questions series. In each post of this series, I will talk about the questions (specific to JavaScript) I faced in my recent interviews. This series will be helpful for you if you are preparing for JavaScript interviews or just started to deep dive into JavaScript and want to test your knowledge.
+
+## Post 1: Create a deep copy of an object
+Many of us who have worked on any fairly large side projects or have contributed to other side projects must have come across JavaScript helper libraries like Lodash.js, Underscore.js. These libraries provide us with helper functions for things that JavaScript does not provide built-in. One of those functions is copying objects in JavaScript. A lot of us know how to copy objects which only have one level of nesting by Object Destructing. But if your object contains multiple nested levels, there is no in-built way in JavaScript to copy that object.
+
+A lot of you might be wondering why this question is asked? If we have the helper library, why not just use that? And you are absolutely right. We should use that and we do use them indeed. But writing such a core function is going to test how you grasp and apply things fundamentally. As we will see later in this article, this question tests how you apply the knowledge that you already have. So let us get into some problem-solving mode 👨‍💻⚔️.
+
+## Problem Statement
+Write a function that will take an object as an argument and returns a deep copy of that object.
+```javascript
+// Signature
+function copyObject(source) {
+
+}
+
+// Usage
+const source = {
+    a: 10,
+    b: 20,
+    c: {
+        d: 30
+    }
+}
+
+const target = copyObject(source);
+```
+*Before diving into the solution, I highly suggest that you try to solve this problem on your own. Here are some hints:*
+- *Forget about the nesting part. First, just try to copy each key and value.*
+- *Now think about how you can identify if a value is an object itself and what to do with it.*
+
+## Solution
+When I am solving any problem, I always like to write the obvious things first. Those things can be found by reading the problem statement carefully. The very obvious thing that the question asks is to return an object. So let us write that down first.
+```javascript
+function copyObject(source) {
+    var target = {};
+
+    return target;
+}
+```
+Now, the problem asks us for a deep copy of the object. But before directly jumping to deep copy, let us first write a simple solution for copying each key value for a single level of nesting. So what do we need for that?
+- We need all the keys from the source object
+- Add all those keys one by one in the target object.
+
+```javascript
+function copyObject(source) {
+    var target = {};
+    const keys = Object.keys(source);
+    keys.forEach(key => {
+        target[key] = source[key];
+    });
+    
+    return target;
+}
+```
+Great! So we have solved the problem for the simplest use case. Now let us think about nesting. So first of all, how will we know if the value corresponding to the current key is an object itself? By using `typeof` operator. And when we know that the current value is an object, how can we get its copy? --> **By using the function that we are writing.** I know this might sound confusing right now. This technique is known as Recursion (You can learn more about recursion [here](https://www.geeksforgeeks.org/recursion/)). Let us just write the code and you will understand. So the final solution to the problem will look like this:
+```javascript
+function copyObject(source) {
+    var target = {};
+    
+    // Getting source object keys
+    const keys = Object.keys(source);
+    keys.forEach(key => {
+        // Checking if current value is an object
+        if (typeof source[key] === "object") {
+            // Calling our function recursively for current value
+            target[key] = copyObject(source[key]);
+        } else {
+            // Directly assigning the value
+            target[key] = source[key];
+        }
+    });
+    
+    return target;
+}
+```
+
+## Conclusion
+Yay!! This looks like a working solution now. But there are still minor problems with this solution like handling array and function values in objects. I would encourage you to write the code that will handle these conditions and post it in the comments. And for more interesting questions like this, keep following this series. Until then, Happy Coding!!
