@@ -1,0 +1,44 @@
+The **promise** feature in Javascript is a crucial part when developing applications of any size. Even the smallest of the project like a TODO application requires the use of promises (Of course there are other ways of doing things which promises can do). This makes Promises one of the favorite topics during interviews. Now we all know how to use it for different things. So to test the in-depth knowledge of Promises, interviewers go for questions that require us to know the working of a promise. In a recent interview, I was asked to execute Promises in sequence and give the result of all promises in an array. So in this post, we are going to solve this problem.
+
+##The Problem
+Execute multiple promises in sequence and give the result of all promises in an array.
+
+##Explanation
+The basic problem explanation here is that we do not want to execute the next Promise before the previous promise is resolved. The first thing that comes to our mind when we hear this is we can create a promise chain, and that will solve the problem. But,
+
+**What if the number of promises is variable?**
+
+Let us establish that for a variable number of promises, we will require an array. Now for this array, how we can ensure that we do not process the next element until the previous element is processed? And how can we gather the result of previous elements, when processing the next element?
+
+Now just read the last questions carefully and observe what array method comes to your mind. Yes, our very own **Array.reduce()**. If Array.reduce() is new to you, you can read more about it [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce). Now the basic idea for our solution is that we will generate the results in the accumulator and process all array elements one by one. 
+
+To simplify, we will perform the following steps:
+1. Start with an empty array Promise as an accumulator.
+2. When the previous accumulator is resolved, we will make a request to the next Promise.
+3. Gather the response of the current promise and return it combined with the accumulator response. 
+4. Repeat 2 and 3 for all the elements in the array.
+
+##Code
+```javascript
+function fakeAPI(str) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {resolve(str + ' resolved.')}, 1000);
+  });
+}
+
+var arr = ['p1', 'p2', 'p3', 'p4'];
+arr.reduce((acc, curr) => {
+  return acc.then(res => {
+    return fakeAPI(curr).then(resp => {
+      return [...res, resp];
+    });
+  });
+}, Promise.resolve([])).then(res => {
+  console.log(res);
+});
+```
+
+##Thoughts
+So this was all to execute promises in sequence. So the process to answer these tricky questions is to bring them down to smaller problems and then solve one by one. To be honest, the interviewer is actually looking at your ability to break the problem into smaller problems. 
+
+If you guys have any suggestions on how this can be done better, please comment below. Happy Coding!!
