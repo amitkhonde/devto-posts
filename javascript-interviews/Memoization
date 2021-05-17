@@ -1,0 +1,89 @@
+# What is this series about?
+Hello all! Welcome to the JavaScript interview questions series. In each post of this series, I will talk about the questions (specific to JavaScript) I faced in my recent interviews. This series will be helpful for you if you are preparing for JavaScript interviews or just started to deep dive into JavaScript and want to test your knowledge.
+
+## Post 2: Implement Memoization in JavaScript
+Imagine you do not have a memory inside your brain. And someone asks you a question like, _"What is 14353 * 34789?"_. You do the calculation and give the answer. Because you do not have any memory, this question and its answer have been wiped out of your mind. Now again if someone asks you the same question, you will again do the calculation and give the answer. Doing this calculation is tedious and it used some of your energy. Isn't this frustrating?
+
+Now let us come to the real world. You have the memory. Someone asks _"What is 14353 * 34789?"_. You do the calculation and give the answer. Now, this question and answer are stored inside your short-term memory. If again in few seconds, you are asked the same question, you will directly access the memory and give the answer without any calculation.
+
+This technique is known as Memoization. In computer science also, this technique is used to avoid heavy calculations. Now enough of imagination. Let us dive into the real interview question. 👨‍💻👨‍💻
+
+## Problem Statement
+Write a function `memoize` which will receive a function and return its memoized version. When the memoized function is called with the same parameters, again and again, it will just log the value with a message "Did not perform calculations. Here is your answer: ". If those parameters have never been passed, it will just print the answer.
+
+```javascript
+function memoize(fn) {
+  // Write your code here
+}
+
+function multiply(num1, num2) {
+  return num1 * num2;
+}
+
+const memoizedMultiply = memoize(multiply);
+
+memoizedMultiply(9, 10);
+// Expected Output: 
+90
+
+memoizedMultiply(9, 10);
+// Expected Output: 
+Did not perform calculations. Here is your answer: 90
+
+memoizedMultiply(8, 10);
+// Expected Output: 
+80
+```
+
+_Before diving into the solution, I highly suggest that you try to solve this problem on your own. Here is a hint: Think Closures._
+
+## Solution
+As mentioned in the previous post, I always start with the basic stuff being asked in the question. The problem statement tells us that we have to return a function that will call the function that we want to memoize and print the result. Let us write that part first.
+
+```javascript
+function memoize(fn) {
+  return function(...args) {
+    const result = fn(...args);
+    console.log(result);
+  }
+}
+```
+
+Great. The next thing problem asks us to memoize the result if we pass the same parameters to the memoized function. This seems like a good opportunity to use Closures. If you are unfamiliar with closures, please read about them [here](https://www.freecodecamp.org/news/lets-learn-javascript-closures-66feb44f6a44/). With the help of the closure, our returned function will have to the variables declared in its parent scope. Let us add the Closure now.
+
+```javascript
+function memoize(fn) {
+  var argumentsMap = {};
+  return function(...args) {
+    const result = fn(...args);
+    console.log(result);
+  }
+}
+```
+
+The idea we are trying to follow here is:
+1. When the memoized function is called, we will store the arguments in the `argumentsMap` as keys and store the result for that argument as its value.
+2. If the function is called for the same parameters, we will check if `argumentsMap` has the parameters as key. If yes, will directly get the value and not perform any calculations.
+
+The obvious question here is that how will we store the arguments as a key in `argumentsMap`? For that, I have chosen an approach where I will apply `JSON.stringify` on arguments and then store them as keys. You can come with a different approach for this which you might think is better. I Would love to see what you think about how this can be done. Please share your approaches in the comments.
+
+With that sorted out, the rest of the code is very simple. We will just add few checks and print the results. The final version of my answer looks like this:
+
+```javascript
+function memoize(fn) {
+  var argumentsMap = {};
+  return function(...args) {
+    const argumentKey = JSON.stringify(args);
+    if (argumentsMap[argumentKey]) {
+      console.log('Did not perform calculations. Here is your answer: ', argumentsMap[argumentKey]);
+      return;
+    }
+    const result = fn(...args);
+    argumentsMap[argumentKey] = result;
+    console.log(result);
+  }
+}
+```
+
+## Conclusion
+Yay!! This looks like a working solution for now. I would love to know what approaches you can come up with for this problem. Do post your suggestions in the comments. And for more interesting questions like this, keep following this series. Until then, Happy Coding!!
